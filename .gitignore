@@ -1,0 +1,8 @@
+# Folders
+Downloads
+src/javascript/node_modules
+dist
+build
+
+# File extentions
+*.pyc
