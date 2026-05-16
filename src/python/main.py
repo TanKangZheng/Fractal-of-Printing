@@ -24,7 +24,7 @@ else:
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("MoxPrinter")
+        self.title("Fractal of Printing")
         self.geometry("1200x800")
         self.images = []
         self.cache = []
@@ -151,7 +151,8 @@ class App(tk.Tk):
         self.show_overlay()
 
         def task():
-            data = self.text_area.get("1.0", tk.END).strip()
+            data = self.text_area.get("1.0", tk.END).splitlines()[0].strip()
+            print(data)
             decklist = pd.parseDecklist(data, self._write_log)
             self.cache = decklist
             self._write_log("Loading Card images...")
@@ -166,7 +167,7 @@ class App(tk.Tk):
         self.show_overlay()
 
         def task():
-            data = self.text_area.get("1.0", tk.END).strip()
+            data = self.text_area.get("1.0", tk.END).splitlines()[0].strip()
             if (len(self.cache) == 0):
                 decklist = pd.parseDecklist(data, self._write_log)
                 self.cache = decklist

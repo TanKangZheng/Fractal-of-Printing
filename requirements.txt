@@ -2,4 +2,3 @@ numpy
 Pillow
 opencv-contrib-python
 requests
-scrython

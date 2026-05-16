@@ -1,10 +1,10 @@
-# MoxPrinter
+# Fractal of Printing
 
-A Moxfield export to MakePlayingCards print converter.
+A silvie.org export to MakePlayingCards print converter.
 
 ## Description
 
-This project aims to be a one-click preperator for converting a Moxfield deck into MakePlayingCards-project ready images, removing the need to manually prepare each individual card. While websites like MPCfill exist, they may not have the printing you desire. Thus, this project uses your selected version of the card in Moxfield, and creates a print-ready version.
+This project aims to be a one-click preperator for converting a silvie.org deck into MakePlayingCards-project ready images, removing the need to manually prepare each individual card.
 
 ## Getting Started
 
@@ -22,16 +22,16 @@ These dependencies are only required if you are building the project yourself! T
     * External Package requirements are listed in [requirements.txt](requirements.txt)
     * Pull the repo, and simply run the main.py file
 * **Standalone Executable (exe)**
-    * Download the MoxPrinter zip file from Downloads
-    * Extract the folder, and run MoxPrinter.exe
+    * Download the Fractal of Printing zip file from Downloads
+    * Extract the folder, and run FractalOfPrinting.exe
     * The exe is not malware, I swear.
 
 ## Usage
 
 * **Left Column | Input and Functions**
     * Input Text Field
-        * *The large input text field is where you will paste your Moxfield export*
-        * *To get the Moxfield export text, simply go to your deck > More > Export > Copy for Moxfield*
+        * *The large input text field is where you will paste your silvie.org deck link*
+        * *To get the silvie.org export text, simply go to your deck and copy the link*
     * Load Images
         * *This button will attempt to fetch all cards you've added*
         * *Once loaded, the preview images will show on the right column*
@@ -57,12 +57,7 @@ This project is licensed under the MIT License - see the [LICENSE.MD](LICENSE.MD
 
 ## Acknowledgments
 
-This project would have likely not been possible without the Scrython open source package, or at least, a hell of a lot more tedious. Major thanks to the developer.
-
-**NandaScott / Scrython**
-* [Scrython](https://github.com/NandaScott/Scrython)
-
-And the slugify function used to ensure that filenames are safe and legal (for your computer to use as a filepath) was taken from another online repo as it was the first thing to pop up.
+The slugify function used to ensure that filenames are safe and legal (for your computer to use as a filepath) was taken from another online repo as it was the first thing to pop up.
 
 **Django**
 * [Django/django/utils/text.py](https://github.com/django/django/blob/main/django/utils/text.py)
