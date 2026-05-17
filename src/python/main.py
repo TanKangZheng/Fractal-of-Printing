@@ -20,6 +20,10 @@ if hasattr(sys, '_MEIPASS'):
     SAVE_FOLDER = os.path.join(os.path.dirname(sys.executable), "Downloads")
 else:
     SAVE_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Downloads")
+TAB_NAMES = [
+            "Main", "Material", "Sideboard", "Mastery",
+            "Token", "Generated", "Pantheon", "Status"
+            ]
 
 class App(tk.Tk):
     def __init__(self):
@@ -27,7 +31,7 @@ class App(tk.Tk):
         self.title("Fractal of Printing")
         self.geometry("1200x800")
         self.images = []
-        self.cache = []
+        self.cache = {}
 
         self._build_layout()
 
@@ -53,16 +57,9 @@ class App(tk.Tk):
         text_frame.columnconfigure(0, weight=1)
         text_frame.rowconfigure(0, weight=1)
 
-        self.text_area = tk.Text(text_frame, wrap=tk.WORD)
-        self.text_area.grid(row=0, column=0, sticky="nsew")
-        text_scroll = ttk.Scrollbar(text_frame, command=self.text_area.yview)
-        text_scroll.grid(row=0, column=1, sticky="ns")
-        self.text_area.config(yscrollcommand=text_scroll.set)
-
-        # Scroll wheel bindings for text area
-        self.text_area.bind("<MouseWheel>", self._scroll_text)
-        self.text_area.bind("<Button-4>", self._scroll_text)
-        self.text_area.bind("<Button-5>", self._scroll_text)
+        # Remove the old tk.Text widget and replace with tk.Entry
+        self.text_area = tk.Entry(left)
+        self.text_area.grid(row=0, column=0, sticky="ew", padx=5, pady=5)
 
         btn_frame = tk.Frame(left)
         btn_frame.grid(row=1, column=0, sticky="ew", padx=5, pady=5)
@@ -87,28 +84,48 @@ class App(tk.Tk):
         right.columnconfigure(0, weight=1)
         right.rowconfigure(0, weight=1)
 
-        self.img_canvas = tk.Canvas(right)
-        self.img_canvas.grid(row=0, column=0, sticky="nsew")
-        self.img_scroll = ttk.Scrollbar(right, orient=tk.VERTICAL, command=self.img_canvas.yview)
-        self.img_scroll.grid(row=0, column=1, sticky="ns")
-        self.img_canvas.config(yscrollcommand=self.img_scroll.set)
-        self.img_frame = tk.Frame(self.img_canvas)
-        self.img_frame.bind(
-            "<Configure>",
-            lambda e: self.img_canvas.configure(scrollregion=self.img_canvas.bbox("all"))
-        )
-        self.img_canvas.create_window((0, 0), window=self.img_frame, anchor="nw")
+        self.notebook = ttk.Notebook(right)
+        self.notebook.grid(row=0, column=0, sticky="nsew")
 
-        # Scroll wheel bindings for image canvas
-        self.img_canvas.bind("<MouseWheel>", self._scroll_images)
-        self.img_canvas.bind("<Button-4>", self._scroll_images)
-        self.img_canvas.bind("<Button-5>", self._scroll_images)
-        self.img_frame.bind("<MouseWheel>", self._scroll_images)
-        self.img_frame.bind("<Button-4>", self._scroll_images)
-        self.img_frame.bind("<Button-5>", self._scroll_images)
+        self.tab_frames = {}
+        self.tab_canvases = {}
+        self.tab_scrollbars = {}
+        self.tab_img_frames = {}
 
-        # Reflow grid on resize
-        self.img_canvas.bind("<Configure>", self.reflow_images)
+        for name in TAB_NAMES:
+            tab = tk.Frame(self.notebook)
+            tab.columnconfigure(0, weight=1)
+            tab.rowconfigure(0, weight=1)
+            self.notebook.add(tab, text=name)
+
+            canvas = tk.Canvas(tab)
+            canvas.grid(row=0, column=0, sticky="nsew")
+
+            scrollbar = ttk.Scrollbar(tab, orient=tk.VERTICAL, command=canvas.yview)
+            scrollbar.grid(row=0, column=1, sticky="ns")
+            canvas.config(yscrollcommand=scrollbar.set)
+
+            img_frame = tk.Frame(canvas)
+            img_frame.bind(
+                "<Configure>",
+                lambda e, c=canvas: c.configure(scrollregion=c.bbox("all"))
+            )
+            canvas.create_window((0, 0), window=img_frame, anchor="nw")
+
+            canvas.bind("<MouseWheel>", self._scroll_images)
+            canvas.bind("<Button-4>", self._scroll_images)
+            canvas.bind("<Button-5>", self._scroll_images)
+            img_frame.bind("<MouseWheel>", self._scroll_images)
+            img_frame.bind("<Button-4>", self._scroll_images)
+            img_frame.bind("<Button-5>", self._scroll_images)
+            canvas.bind("<Configure>", self._reflow_images)
+
+            self.tab_frames[name] = tab
+            self.tab_canvases[name] = canvas
+            self.tab_scrollbars[name] = scrollbar
+            self.tab_img_frames[name] = img_frame
+        
+        self.notebook.bind("<<NotebookTabChanged>>", self._reflow_images)
 
     def _build_overlay(self):
         self.overlay = tk.Frame(self, bg='black')
@@ -151,15 +168,25 @@ class App(tk.Tk):
         self.show_overlay()
 
         def task():
-            data = self.text_area.get("1.0", tk.END).splitlines()[0].strip()
-            print(data)
+            data = self.text_area.get().strip()
             decklist = pd.parseDecklist(data, self._write_log)
             self.cache = decklist
-            self._write_log("Loading Card images...")
-            self._load_card_images(decklist)
 
-            # Post
-            self.after(0, lambda: self._finish_loading())
+            # Fetch images in same thread
+            raw_images = {tab: [] for tab in TAB_NAMES}
+            for tab_name, cards in decklist.items():
+                for card in cards:
+                    if card.imgLink is None:
+                        continue
+                    try:
+                        self._write_log(f"Getting image for {card.name}...")
+                        response = requests.get(card.imgLink)
+                        img = Image.open(BytesIO(response.content))
+                        raw_images[tab_name].append(img)
+                    except Exception as e:
+                        self._write_log(f"Could not load image for {card.name}: {e}")
+
+            self.after(0, lambda: self._finish_loading(raw_images))
 
         threading.Thread(target=task, daemon=True).start()
 
@@ -167,7 +194,7 @@ class App(tk.Tk):
         self.show_overlay()
 
         def task():
-            data = self.text_area.get("1.0", tk.END).splitlines()[0].strip()
+            data = self.text_area.get().strip()
             if (len(self.cache) == 0):
                 decklist = pd.parseDecklist(data, self._write_log)
                 self.cache = decklist
@@ -181,55 +208,54 @@ class App(tk.Tk):
                 pp.upscale_bordered(SAVE_FOLDER, log_func=self._write_log)
 
             # Post
-            self.after(0, lambda: self._finish_loading())
+            self.after(0, lambda: self._finish_loading(self.cache))
                 
         threading.Thread(target=task, daemon=True).start()
 
-    def _finish_loading(self):
-        self.hide_overlay()
+    def _finish_loading(self, raw_images: dict):
+        try:
+            self.raw_images = raw_images
+            for tab_name in self.tab_canvases:
+                img_frame = self.tab_img_frames[tab_name]
+                for widget in img_frame.winfo_children():
+                    widget.destroy()
+            self.images.clear()
+            self._reflow_images()
+        except Exception as e:
+            print(f"Error in _finish_loading: {e}")
+        finally:
+            self.hide_overlay()
 
-    def _load_card_images(self, cardList: list[pd.CardData]):
-        for widget in self.img_frame.winfo_children():
-            widget.destroy()
-        self.images.clear()
-        self.raw_images = []  # Store raw PIL images for reflowing
 
-        for card in cardList:
-            if card.imgLink is None:
-                continue
-            try:
-                self._write_log(f"Getting image from {card.imgLink}...")
-                response = requests.get(card.imgLink)
-                img = Image.open(BytesIO(response.content))
-                self.raw_images.append(img)
-            except Exception as e:
-                self._write_log(f"Could not load image for {card.name}: {e}")
-
-        self.reflow_images()
-
-    def reflow_images(self, event=None):
+    def _reflow_images(self, event=None):
         if not hasattr(self, 'raw_images') or not self.raw_images:
             return
+        active_tab = self.notebook.tab(self.notebook.select(), "text")
+        canvas = self.tab_canvases[active_tab]
+        img_frame = self.tab_img_frames[active_tab]
+        scrollbar = self.tab_scrollbars[active_tab]
 
-        # Clear existing widgets
-        for widget in self.img_frame.winfo_children():
+        for widget in img_frame.winfo_children():
             widget.destroy()
         self.images.clear()
 
         COLS = 3
         PADDING = 4
-        scrollbar_width = self.img_scroll.winfo_width()
-        canvas_width = self.img_canvas.winfo_width() - scrollbar_width
+        scrollbar_width = scrollbar.winfo_width()
+        canvas_width = canvas.winfo_width() - scrollbar_width
         img_width = (canvas_width - (PADDING * (COLS + 1))) // COLS
 
-        for i, pil_img in enumerate(self.raw_images):
+        if img_width <= 0:  # ADD THIS
+            return
+
+        for i, pil_img in enumerate(self.raw_images.get(active_tab, [])):
             aspect = pil_img.height / pil_img.width
             img_height = int(img_width * aspect)
             resized = pil_img.resize((img_width, img_height), Image.LANCZOS)
             tk_img = ImageTk.PhotoImage(resized)
             self.images.append(tk_img)
             row, col = divmod(i, COLS)
-            lbl = tk.Label(self.img_frame, image=tk_img)
+            lbl = tk.Label(img_frame, image=tk_img)
             lbl.bind("<MouseWheel>", self._scroll_images)
             lbl.bind("<Button-4>", self._scroll_images)
             lbl.bind("<Button-5>", self._scroll_images)
@@ -244,12 +270,13 @@ class App(tk.Tk):
             self.text_area.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
     def _scroll_images(self, event):
+        canvas = self.tab_canvases[self.notebook.tab(self.notebook.select(), "text")]
         if event.num == 4:
-            self.img_canvas.yview_scroll(-1, "units")
+            canvas.yview_scroll(-1, "units")
         elif event.num == 5:
-            self.img_canvas.yview_scroll(1, "units")
+            canvas.yview_scroll(1, "units")
         else:
-            self.img_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
 
 if __name__ == "__main__":
     app = App()

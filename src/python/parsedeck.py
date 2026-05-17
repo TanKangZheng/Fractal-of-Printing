@@ -3,6 +3,7 @@ import requests
 
 # Helper Files
 import slugify as slg
+from main import TAB_NAMES
 
 # Python Package
 import os.path
@@ -24,16 +25,25 @@ def parseDecklist(decklink:str, log_func=print):
     else:
         log_func("Error fetching response!")
         return None
-
-    mainCards = deckinfo.get('cards', {}).get('main', [])
-
-    parsedList = []
-    for entry in mainCards:
-        cardData = CardData()
-        cardData.imgLink = entry.get("image")
-        cardData.name = entry.get("name")
-        log_func(f"Added {cardData.name} with link: {cardData.imgLink}")
-        parsedList.append(cardData)
+    
+    parsedList = {}
+    for deckType in TAB_NAMES:
+        subdeckList = []
+        cardEntries = deckinfo.get('cards', {}).get(deckType.lower(), [])
+        for entry in cardEntries:
+            cardData = CardData()
+            cardData.imgLink = entry.get("image")
+            cardData.name = entry.get("name")
+            log_func(f"Added {cardData.name} with link: {cardData.imgLink}")
+            subdeckList.append(cardData)
+            if (entry.get("orientation") is not None):
+                altCardData = CardData()
+                altCardEntry = entry.get("orientations")[0]
+                altCardData.imgLink = altCardEntry.get("image")
+                altCardData.name = altCardEntry.get("name")
+                log_func(f"Added {altCardData.name} with link: {altCardData.imgLink}")
+                subdeckList.append(altCardData)
+        parsedList[deckType] = subdeckList
 
     return parsedList
 
