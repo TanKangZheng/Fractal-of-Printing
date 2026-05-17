@@ -8,6 +8,7 @@ from main import TAB_NAMES
 # Python Package
 import os.path
 import shutil
+from urllib.parse import urlparse
 
 class CardData:
     name = None
@@ -18,7 +19,11 @@ class CardData:
 
 def parseDecklist(decklink:str, log_func=print):
 
-    response = requests.get(decklink, params={'format': 'json'})
+    # If silvie.org, add json format as a param
+    if ((source := urlparse(decklink).netloc) and ('silvie.org' in source)):
+        response = requests.get(decklink, params={'format': 'json'})
+    else:
+        response = requests.get(decklink)
     print(f"Fetching data from {response.url}")
     if (response.status_code == 200):
         deckinfo = response.json()

@@ -14,6 +14,7 @@ import threading
 from pathlib import Path
 import os
 import sys
+from datetime import datetime
 
 #--- Global Variables ---#
 if hasattr(sys, '_MEIPASS'):
@@ -192,24 +193,46 @@ class App(tk.Tk):
 
     def DownloadImages(self):
         self.show_overlay()
-
         def task():
             data = self.text_area.get().strip()
-            if (len(self.cache) == 0):
+            if len(self.cache) == 0:
                 decklist = pd.parseDecklist(data, self._write_log)
                 self.cache = decklist
-            for card in self.cache:
-                pd.saveImage(card, SAVE_FOLDER, self._write_log)
-            if (self.FoilProcessing.get()):
-                pp.boost_saturation(SAVE_FOLDER, log_func=self._write_log)
-                pp.boost_uniform_vibrancy(SAVE_FOLDER, log_func=self._write_log)
-            pp.add_border(SAVE_FOLDER, log_func=self._write_log)
-            if (self.Upscale.get()):
-                pp.upscale_bordered(SAVE_FOLDER, log_func=self._write_log)
+            # Create the timestamp folder
+            timestampFolder = os.path.join(SAVE_FOLDER, datetime.now().strftime("%Y%m%d%H%M%S"))
+            for deckType in TAB_NAMES:
+                cardList = self.cache[deckType]
+                currentDeckFolder = os.path.join(timestampFolder, deckType)
+                if len(cardList) != 0:
+                    Path(currentDeckFolder).mkdir(parents=True, exist_ok=True)
+                else:
+                    continue
+                for card in cardList:
+                    pd.saveImage(card, currentDeckFolder, self._write_log)
+                if self.FoilProcessing.get():
+                    pp.boost_saturation(currentDeckFolder, log_func=self._write_log)
+                    pp.boost_uniform_vibrancy(currentDeckFolder, log_func=self._write_log)
+                pp.add_border(currentDeckFolder, log_func=self._write_log)
+                if self.Upscale.get():
+                    pp.upscale_bordered(currentDeckFolder, log_func=self._write_log)
 
-            # Post
-            self.after(0, lambda: self._finish_loading(self.cache))
-                
+            # Build raw_images from cache for _finish_loading
+            raw_images = {tab: [] for tab in TAB_NAMES}
+            for tab_name, cards in self.cache.items():
+                for card in cards:
+                    if card.imgLink is None:
+                        continue
+                    try:
+                        self._write_log(f"Getting image for {card.name}...")
+                        response = requests.get(card.imgLink)
+                        img = Image.open(BytesIO(response.content))
+                        raw_images[tab_name].append(img)
+                    except Exception as e:
+                        self._write_log(f"Could not load image for {card.name}: {e}")
+
+            os.startfile(timestampFolder)
+            self.after(0, lambda: self._finish_loading(raw_images))
+
         threading.Thread(target=task, daemon=True).start()
 
     def _finish_loading(self, raw_images: dict):
