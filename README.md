@@ -1,10 +1,12 @@
 # Fractal of Printing
 
-A silvie.org export to MakePlayingCards print converter.
+A Grand Archive deck exporter to MakePlayingCards print converter.
 
 ## Description
 
-This project aims to be a one-click preperator for converting a silvie.org deck into MakePlayingCards-project ready images, removing the need to manually prepare each individual card.
+This project aims to be a one-click preperator for converting a Grand Archive deck into MakePlayingCards-project ready images, removing the need to manually prepare each individual card.
+
+Currently, this project supports Silvie.gg and Silvie.org decklists.
 
 ## Getting Started
 
@@ -30,8 +32,9 @@ These dependencies are only required if you are building the project yourself! T
 
 * **Left Column | Input and Functions**
     * Input Text Field
-        * *The large input text field is where you will paste your silvie.org deck link*
-        * *To get the silvie.org export text, simply go to your deck and copy the link*
+        * *Paste your decklist link here*
+        * **Silvie.org**: *Paste the website's deck link as is*
+        * **Silvie.gg**: *Export Decklist > Export for TTS, then paste the link*
     * Load Images
         * *This button will attempt to fetch all cards you've added*
         * *Once loaded, the preview images will show on the right column*
