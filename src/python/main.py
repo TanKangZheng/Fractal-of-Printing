@@ -33,12 +33,20 @@ class App(tk.Tk):
         self.geometry("1200x800")
         self.images = []
         self.cache = {}
+        self.cancelFlag = False
 
         self._build_layout()
 
         Path(SAVE_FOLDER).mkdir(parents=True, exist_ok=True)
 
+    def _cancel_task(self, event=None):
+        self.cancelFlag = True
+
     def _build_layout(self):
+
+        # Binds _cancel_task function to escape key
+        self.bind("<Escape>", self._cancel_task)
+
         self.columnconfigure(0, weight=2, minsize=0, uniform="col")
         self.columnconfigure(1, weight=3, minsize=0, uniform="col")
         self.rowconfigure(0, weight=1)
@@ -167,6 +175,7 @@ class App(tk.Tk):
 
     def LoadCards(self):
         self.show_overlay()
+        self.cancelFlag = False
 
         def task():
             data = self.text_area.get().strip()
@@ -177,6 +186,8 @@ class App(tk.Tk):
             raw_images = {tab: [] for tab in TAB_NAMES}
             for tab_name, cards in decklist.items():
                 for card in cards:
+                    if self.cancelFlag:
+                        break
                     if card.imgLink is None:
                         continue
                     try:
@@ -193,6 +204,8 @@ class App(tk.Tk):
 
     def DownloadImages(self):
         self.show_overlay()
+        self.cancelFlag = False
+        
         def task():
             data = self.text_area.get().strip()
             if len(self.cache) == 0:
@@ -208,18 +221,26 @@ class App(tk.Tk):
                 else:
                     continue
                 for card in cardList:
+                    if self.cancelFlag:
+                        break
                     pd.saveImage(card, currentDeckFolder, self._write_log)
                 if self.FoilProcessing.get():
+                    if self.cancelFlag:
+                        break
                     pp.boost_saturation(currentDeckFolder, log_func=self._write_log)
                     pp.boost_uniform_vibrancy(currentDeckFolder, log_func=self._write_log)
                 pp.add_border(currentDeckFolder, log_func=self._write_log)
                 if self.Upscale.get():
+                    if self.cancelFlag:
+                        break
                     pp.upscale_bordered(currentDeckFolder, log_func=self._write_log)
 
             # Build raw_images from cache for _finish_loading
             raw_images = {tab: [] for tab in TAB_NAMES}
             for tab_name, cards in self.cache.items():
                 for card in cards:
+                    if self.cancelFlag:
+                        break
                     if card.imgLink is None:
                         continue
                     try:
