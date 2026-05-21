@@ -12,7 +12,7 @@ from urllib.parse import urlparse
 import re
 
 SILVIE_GG_SECTION_MAP = {
-    "main deck:":       TAB_NAMES[0],
+    "main deck":       TAB_NAMES[0],
     "material deck":    TAB_NAMES[1],
     "sideboard":        TAB_NAMES[2]
 }
@@ -50,9 +50,13 @@ def parseDecklist_SilvieGG(decklink: str, log_func=print):
     for decklistEntry in decklist.splitlines():
         header = sectionPattern.match(decklistEntry)
         if header:
-            currentKey = SILVIE_GG_SECTION_MAP.get(header.group(1).lower())  # normalise to lowercase for map lookup
+            raw = header.group(1).lower()
+            currentKey = SILVIE_GG_SECTION_MAP.get(raw)  # normalise to lowercase for map lookup
+            log_func(f"Header matched: '{raw}' -> currentKey: '{currentKey}'")
         elif decklistEntry and currentKey:
-            sections[currentKey].append(decklistEntry.strip())
+            cardName = decklistEntry.strip()
+            sections[currentKey].append(cardName)
+            log_func(f"Adding {cardName} to {currentKey}")
 
     # Create dicts: each tab → list of CardData
     def build_dict(card_lines, tab_name):
@@ -61,7 +65,7 @@ def parseDecklist_SilvieGG(decklink: str, log_func=print):
             match = re.match(r'^\d+\s+(.+)$', line)
             if match:
                 name    = match.group(1)
-                imgLink = cardImages.get(name)
+                imgLink = "https://silvie.gg" + cardImages.get(name)
                 result.append(CardData(name=name, imgLink=imgLink))
                 log_func(f"[{tab_name}]: Added {name} with link: {imgLink}")
         return result
