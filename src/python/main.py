@@ -252,6 +252,7 @@ class App(tk.Tk):
                         self._write_log(f"Could not load image for {card.name}: {e}")
 
             os.startfile(timestampFolder)
+            self.cache.clear()
             self.after(0, lambda: self._finish_loading(raw_images))
 
         threading.Thread(target=task, daemon=True).start()
