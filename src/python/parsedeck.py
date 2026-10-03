@@ -105,10 +105,11 @@ def parseDecklist_SilvieOrg(decklink: str, log_func=print):
 
 def parseDecklist(decklink:str, log_func=print):
     domain = urlparse(decklink).netloc
+    print(domain)
 
     if (domain == "silvie.gg"):
         return parseDecklist_SilvieGG(decklink, log_func)
-    elif (domain == "silvie.org"):
+    elif (domain == "build-v2.silvie.org" or domain == "silvie.org"):
         return parseDecklist_SilvieOrg(decklink, log_func)
     else:
         return None
