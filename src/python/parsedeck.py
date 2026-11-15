@@ -1,5 +1,6 @@
 # Third-Party Packages
 import requests
+import GAthon
 
 # Helper Files
 import slugify as slg
@@ -10,6 +11,8 @@ import os.path
 import shutil
 from urllib.parse import urlparse
 import re
+
+GAthon.set_client("Fractal of Printing", "0.3.0", "tankangzheng@hotmail.com")
 
 SILVIE_GG_SECTION_MAP = {
     "main deck":       TAB_NAMES[0],
@@ -40,7 +43,6 @@ def parseDecklist_SilvieGG(decklink: str, log_func=print):
         return None
 
     decklist   = deckinfo["decklist"]
-    cardImages = deckinfo["cardImages"]
 
     # Split the json data into sections
     sectionPattern = re.compile(r'^(Material deck|Main deck|Sideboard):$', re.MULTILINE | re.IGNORECASE)
@@ -65,9 +67,18 @@ def parseDecklist_SilvieGG(decklink: str, log_func=print):
             match = re.match(r'^\d+\s+(.+)$', line)
             if match:
                 name    = match.group(1)
-                imgLink = "https://silvie.gg" + cardImages.get(name)
-                result.append(CardData(name=name, imgLink=imgLink))
-                log_func(f"[{tab_name}]: Added {name} with link: {imgLink}")
+                log_func(f"[{tab_name}]: Querying {name} from GA Index")
+                # Query GA Index for the card name
+                entry = GAthon.QuickSearch(name=name)[0]
+                if entry != None:
+                    result.append(CardData(name=name, imgLink=entry.editions[0].img_link))
+                    log_func(f"[{tab_name}]: Added {name} with link: {entry.editions[0].img_link}")
+
+                    # Check for alternate side
+                    if entry.editions[0].orientation != None:
+                        result.append(CardData(name=entry.editions[0].other_orientations[0].name, imgLink=entry.editions[0].other_orientations[0].editions[0].img_link))
+                        log_func(f"[{tab_name}]: Added {entry.editions[0].other_orientations[0].name} with link: {entry.editions[0].other_orientations[0].editions[0].img_link}")
+
         return result
 
     parsedList = {tab: build_dict(sections[tab], tab) for tab in TAB_NAMES}
@@ -92,7 +103,7 @@ def parseDecklist_SilvieOrg(decklink: str, log_func=print):
             cardData.name = entry.get("name")
             log_func(f"Added {cardData.name} with link: {cardData.imgLink}")
             subdeckList.append(cardData)
-            if (entry.get("orientation") is not None):
+            if (entry.get("orientation") != None):
                 altCardData = CardData()
                 altCardEntry = entry.get("orientations")[0]
                 altCardData.imgLink = altCardEntry.get("image")
