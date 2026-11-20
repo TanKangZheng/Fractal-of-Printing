@@ -69,15 +69,22 @@ def parseDecklist_SilvieGG(decklink: str, log_func=print):
                 name    = match.group(1)
                 log_func(f"[{tab_name}]: Querying {name} from GA Index")
                 # Query GA Index for the card name
-                entry = GAthon.QuickSearch(name=name)[0]
-                if entry != None:
-                    result.append(CardData(name=name, imgLink=entry.editions[0].img_link))
-                    log_func(f"[{tab_name}]: Added {name} with link: {entry.editions[0].img_link}")
+                #entry = GAthon.QuickSearch(name=name)[0]
+
+                cardEntries = GAthon.QuickSearch(name=name)
+                cardData = None
+                for entry in cardEntries:
+                    if (entry.name == name):
+                        cardData = entry
+
+                if cardData != None:
+                    result.append(CardData(name=name, imgLink=cardData.editions[0].img_link))
+                    log_func(f"[{tab_name}]: Added {name} with link: {cardData.editions[0].img_link}")
 
                     # Check for alternate side
-                    if entry.editions[0].orientation != None:
-                        result.append(CardData(name=entry.editions[0].other_orientations[0].name, imgLink=entry.editions[0].other_orientations[0].editions[0].img_link))
-                        log_func(f"[{tab_name}]: Added {entry.editions[0].other_orientations[0].name} with link: {entry.editions[0].other_orientations[0].editions[0].img_link}")
+                    if cardData.editions[0].orientation != None:
+                        result.append(CardData(name=cardData.editions[0].other_orientations[0].name, imgLink=cardData.editions[0].other_orientations[0].editions[0].img_link))
+                        log_func(f"[{tab_name}]: Added {cardData.editions[0].other_orientations[0].name} with link: {cardData.editions[0].other_orientations[0].editions[0].img_link}")
 
         return result
 
