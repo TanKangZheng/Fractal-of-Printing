@@ -34,7 +34,7 @@ These dependencies are only required if you are building the project yourself! T
     * Input Text Field
         * *Paste your decklist link here*
         * **Silvie.org**: *Paste the website's deck link as is*
-        * **Silvie.gg**: *Export Decklist > Export for TTS, then paste the link*
+        * **Silvie.gg**: *Paste the website's link as is*
     * Load Images
         * *This button will attempt to fetch all cards you've added*
         * *Once loaded, the preview images will show on the right column*
